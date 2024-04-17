@@ -1,0 +1,34 @@
+import os
+from google.cloud import vision_v1
+
+# Vervang 'YOUR_API_KEY' door je eigen API-sleutel voor toegang tot de service
+api_key = 'AIzaSyDPpsYcwrjC6uUYzNELVKAPynBRTsBXyNE'
+
+# Verbinding maken met de Google Cloud Vision API
+client = vision_v1.ImageAnnotatorClient(credentials=api_key)
+
+# Definieer het pad naar de map met afbeeldingen
+folder_path = 'meters/'
+
+# Loop door elke afbeelding in de map
+for filename in os.listdir(folder_path):
+    # Controleer of het bestand een afbeelding is
+    if filename.endswith('.jpg') or filename.endswith('.png'):
+        # Definieer het volledige pad naar de afbeelding
+        image_path = os.path.join(folder_path, filename)
+
+        # Lees de afbeelding in binair formaat
+        with open(image_path, 'rb') as image_file:
+            content = image_file.read()
+
+        # Maak een image object
+        image = vision_v1.Image(content=content)
+
+        # Voer een labeldetectie uit op de afbeelding
+        response = client.label_detection(image=image)
+
+        # Converteer de respons naar JSON-formaat en print de resultaten
+        labels = response.label_annotations
+        print('Labels voor', filename, ':')
+        for label in labels:
+            print(label.description)
