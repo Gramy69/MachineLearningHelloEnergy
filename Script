@@ -1,34 +1,38 @@
-import os
-from google.cloud import vision_v1
+from google.cloud import storage
+import cv2
+import numpy as np
 
-# Vervang 'YOUR_API_KEY' door je eigen API-sleutel voor toegang tot de service
-api_key = 'AIzaSyDPpsYcwrjC6uUYzNELVKAPynBRTsBXyNE'
 
-# Verbinding maken met de Google Cloud Vision API
-client = vision_v1.ImageAnnotatorClient(credentials=api_key)
+# Verbind met de Google Cloud Storage-client
+def download_blob(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+    blob.download_to_filename(destination_file_name)
+    print(f'Blob {source_blob_name} gedownload naar {destination_file_name}.')
 
-# Definieer het pad naar de map met afbeeldingen
-folder_path = 'meters/'
 
-# Loop door elke afbeelding in de map
-for filename in os.listdir(folder_path):
-    # Controleer of het bestand een afbeelding is
-    if filename.endswith('.jpg') or filename.endswith('.png'):
-        # Definieer het volledige pad naar de afbeelding
-        image_path = os.path.join(folder_path, filename)
+# Lijst van bestanden in de bucket
+bucket_name = 'datasetmeters'
+prefix = 'path/to/images/'  # Prefix voor de bestandsnamen in de bucket
+storage_client = storage.Client()
+bucket = storage_client.get_bucket(bucket_name)
+blobs = bucket.list_blobs(prefix=prefix)
+image_urls = [f"https://storage.googleapis.com/{bucket_name}/{blob.name}" for blob in blobs]
 
-        # Lees de afbeelding in binair formaat
-        with open(image_path, 'rb') as image_file:
-            content = image_file.read()
+# Laad de afbeeldingen vanuit Google Cloud Storage en voer de gewenste bewerkingen uit
+for url in image_urls:
+    # Download de afbeelding naar een tijdelijk bestand
+    temp_file = 'temp.jpg'
+    download_blob(bucket_name, url[len("https://storage.googleapis.com/" + bucket_name + "/"):], temp_file)
 
-        # Maak een image object
-        image = vision_v1.Image(content=content)
+    # Lees de afbeelding in met OpenCV
+    image = cv2.imread(temp_file)
 
-        # Voer een labeldetectie uit op de afbeelding
-        response = client.label_detection(image=image)
+    # Voer hier je bewerkingen uit met de afbeelding, bijvoorbeeld:
+    # - Toepassen van machine learning-modellen
+    # - Bewerken van de afbeelding
 
-        # Converteer de respons naar JSON-formaat en print de resultaten
-        labels = response.label_annotations
-        print('Labels voor', filename, ':')
-        for label in labels:
-            print(label.description)
+    # Verwijder het tijdelijke bestand
+    os.remove(temp_file)
