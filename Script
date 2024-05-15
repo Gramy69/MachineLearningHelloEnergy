@@ -1,7 +1,8 @@
 from google.cloud import storage
 import cv2
 import numpy as np
-
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 
 # Verbind met de Google Cloud Storage-client
 def download_blob(bucket_name, source_blob_name, destination_file_name):
@@ -21,6 +22,23 @@ bucket = storage_client.get_bucket(bucket_name)
 blobs = bucket.list_blobs(prefix=prefix)
 image_urls = [f"https://storage.googleapis.com/{bucket_name}/{blob.name}" for blob in blobs]
 
+# Definieer de CNN-architectuur
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3)),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dense(NUM_CLASSES, activation='softmax')
+])
+
+# Compileer het model
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
 # Laad de afbeeldingen vanuit Google Cloud Storage en voer de gewenste bewerkingen uit
 for url in image_urls:
     # Download de afbeelding naar een tijdelijk bestand
@@ -33,6 +51,9 @@ for url in image_urls:
     # Voer hier je bewerkingen uit met de afbeelding, bijvoorbeeld:
     # - Toepassen van machine learning-modellen
     # - Bewerken van de afbeelding
+
+    # Voer de afbeelding door het CNN-model
+    prediction = model.predict(np.array([image]))
 
     # Verwijder het tijdelijke bestand
     os.remove(temp_file)
