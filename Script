@@ -1,69 +1,67 @@
 from google.cloud import storage
 import cv2
 import numpy as np
+import os
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-import os
 
-# Functie om blobs te downloaden van Google Cloud Storage
+# Definieer het aantal klassen
+NUM_CLASSES = 5
+
+# Verbind met de Google Cloud Storage-client
 def download_blob(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)
     blob.download_to_filename(destination_file_name)
     print(f'Blob {source_blob_name} gedownload naar {destination_file_name}.')
 
-# Instellingen
+# Lijst van bestanden in de bucket
 bucket_name = 'datasetmeters'
-prefix = 'path/to/images/'
+prefix = 'path/to/images/'  # Prefix voor de bestandsnamen in de bucket
 storage_client = storage.Client()
 bucket = storage_client.get_bucket(bucket_name)
 blobs = bucket.list_blobs(prefix=prefix)
 image_urls = [f"https://storage.googleapis.com/{bucket_name}/{blob.name}" for blob in blobs]
 
-# Download en verwerk de afbeeldingen
-IMAGE_HEIGHT = 128
-IMAGE_WIDTH = 128
-
-def load_and_preprocess_image(file_path):
-    image = cv2.imread(file_path)
-    image = cv2.resize(image, (IMAGE_HEIGHT, IMAGE_WIDTH))
-    image = image / 255.0
-    return image
-
+# Laad de afbeeldingen vanuit Google Cloud Storage en voer de gewenste bewerkingen uit
 images = []
-labels = []  # Voeg hier je eigen logic toe om labels te genereren of te laden
-
+labels = []  # Voeg labels toe aan je dataset
 for url in image_urls:
+    # Download de afbeelding naar een tijdelijk bestand
     temp_file = 'temp.jpg'
     download_blob(bucket_name, url[len("https://storage.googleapis.com/" + bucket_name + "/"):], temp_file)
-    image = load_and_preprocess_image(temp_file)
+
+    # Lees de afbeelding in met OpenCV
+    image = cv2.imread(temp_file)
+
+    # Voeg je preprocessing en labeling hier toe
     images.append(image)
-    labels.append(...)  # Voeg hier de juiste labels toe
+    labels.append(0)  # Pas dit aan naar de juiste label
+
+    # Verwijder het tijdelijke bestand
     os.remove(temp_file)
 
+# Converteer lijsten naar numpy arrays
 images = np.array(images)
 labels = np.array(labels)
 
-# Maak een TensorFlow dataset
-dataset = tf.data.Dataset.from_tensor_slices((images, labels))
-dataset = dataset.shuffle(buffer_size=1000).batch(32)
-
-# Bouw het CNN model
+# Bouw het model
 model = Sequential([
-    Conv2D(32, (3, 3), activation='relu', input_shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3)),
-    MaxPooling2D((2, 2)),
-    Conv2D(64, (3, 3), activation='relu'),
+    Conv2D(32, (3, 3), activation='relu', input_shape=(images.shape[1], images.shape[2], images.shape[3])),
     MaxPooling2D((2, 2)),
     Flatten(),
     Dense(128, activation='relu'),
     Dense(NUM_CLASSES, activation='softmax')
 ])
 
-# Compileer en train het model
-model.compile(optimizer='adam',
-              loss='sparse_categorical_crossentropy',
-              metrics=['accuracy'])
+# Compileer het model
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-model.fit(dataset, epochs=10)
+# Train het model
+model.fit(images, labels, epochs=10)
+
+# Sla het model op
+model.save('saved_model')
