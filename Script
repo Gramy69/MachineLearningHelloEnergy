@@ -5,7 +5,8 @@ import os
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # Configuratie
 NUM_CLASSES = 5
@@ -130,20 +131,31 @@ labels = np.array(labels)
 # Controleer de vorm van de images array
 print(f"Shape van images array: {images.shape}")
 
+# Data Augmentatie
+datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    horizontal_flip=True
+)
+
 # Bouw het model
 model = Sequential([
     Conv2D(32, (3, 3), activation='relu', input_shape=(IMAGE_SIZE[0], IMAGE_SIZE[1], 3)),
     MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
     Flatten(),
     Dense(128, activation='relu'),
+    Dropout(0.5),
     Dense(NUM_CLASSES, activation='softmax')
 ])
 
 # Compileer het model
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-# Train het model
-model.fit(images, labels, epochs=10)
+# Train het model met data augmentatie
+model.fit(datagen.flow(images, labels, batch_size=32), epochs=20)
 
 # Sla het model op in de native Keras-indeling
 model.save('saved_model.keras')
