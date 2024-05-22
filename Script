@@ -26,13 +26,21 @@ bucket = storage_client.get_bucket(bucket_name)
 blobs = bucket.list_blobs(prefix=prefix)
 image_urls = [f"https://storage.googleapis.com/{bucket_name}/{blob.name}" for blob in blobs]
 
+# Debugging: Print de namen van de blobs
+print("Bestanden in de bucket:")
+for blob in blobs:
+    print(blob.name)
+
 # Laad de afbeeldingen vanuit Google Cloud Storage en voer de gewenste bewerkingen uit
 images = []
 labels = []  # Voeg labels toe aan je dataset
 for url in image_urls:
+    # Debugging: Print de URL van het bestand dat wordt gedownload
+    print(f"Downloaden van: {url}")
+
     # Download de afbeelding naar een tijdelijk bestand
     temp_file = 'temp.jpg'
-    download_blob(bucket_name, url[len("https://storage.googleapis.com/" + bucket_name + "/"):], temp_file)
+    download_blob(bucket_name, url[len(f"https://storage.googleapis.com/{bucket_name}/"):], temp_file)
 
     # Lees de afbeelding in met OpenCV
     image = cv2.imread(temp_file)
@@ -41,6 +49,8 @@ for url in image_urls:
         # Voeg je preprocessing en labeling hier toe
         images.append(image)
         labels.append(0)  # Pas dit aan naar de juiste label
+    else:
+        print(f"Kon de afbeelding niet laden: {temp_file}")
 
     # Verwijder het tijdelijke bestand
     os.remove(temp_file)
