@@ -34,7 +34,7 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
 
 def load_labels(csv_file):
     """Laad labels uit het CSV-bestand."""
-    df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_file, encoding='latin1')
     print(df)  # Druk de inhoud van het CSV-bestand af
     return dict(zip(df.filename, df.label))
 
@@ -45,7 +45,7 @@ def update_csv_with_new_files():
 
     # Laad het bestaande CSV-bestand
     try:
-        df = pd.read_csv(csv_file_local_path)
+        df = pd.read_csv(csv_file_local_path, encoding='latin1')
     except FileNotFoundError:
         df = pd.DataFrame(columns=['filename', 'label'])
 
