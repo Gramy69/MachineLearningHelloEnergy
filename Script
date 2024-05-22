@@ -145,5 +145,5 @@ model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=
 # Train het model
 model.fit(images, labels, epochs=10)
 
-# Sla het model op in HDF5-indeling
-model.save('saved_model.h5')
+# Sla het model op in de native Keras-indeling
+model.save('saved_model.keras')
