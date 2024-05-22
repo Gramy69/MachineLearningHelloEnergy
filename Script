@@ -25,22 +25,24 @@ def load_labels(csv_file):
     print(df)  # Druk de inhoud van het CSV-bestand af
     return dict(zip(df.filename, df.label))
 
-# Label map omzetten naar numerieke waarden
-label_map = {'Provider1': 0, 'Provider2': 1, 'Provider3': 2, 'Provider4': 3, 'Provider5': 4}
+# Laad labels vanuit de CSV-bucket
+csv_bucket_name = 'csvbuckethelloenergy'  # Vervang dit door de naam van je CSV-bucket
+csv_file_blob_name = 'labels.csv'  # Zorg ervoor dat dit pad correct is in de CSV-bucket
+csv_file_local_path = 'labels.csv'
+download_blob(csv_bucket_name, csv_file_blob_name, csv_file_local_path)
 
 # Laad labels
-label_file = 'path/to/your/labels.csv'  # Pas dit pad aan naar de locatie van je CSV-bestand
-labels_dict = load_labels(label_file)
+labels_dict = load_labels(csv_file_local_path)
 
-# Lijst van bestanden in de bucket
-bucket_name = 'datasetmeters'
+# Lijst van bestanden in de afbeelding-bucket
+image_bucket_name = 'datasetmeters'
 prefix = ''  # Prefix voor de bestandsnamen in de bucket is leeg omdat de afbeeldingen in de hoofdmap staan
 storage_client = storage.Client()
-bucket = storage_client.get_bucket(bucket_name)
-blobs = bucket.list_blobs(prefix=prefix)
+image_bucket = storage_client.get_bucket(image_bucket_name)
+blobs = image_bucket.list_blobs(prefix=prefix)
 
 # Debugging: Print de namen van de blobs
-print("Bestanden in de bucket:")
+print("Bestanden in de afbeelding-bucket:")
 blob_names = [blob.name for blob in blobs]
 for name in blob_names:
     print(name)
@@ -51,13 +53,13 @@ labels = []  # Voeg labels toe aan je dataset
 
 for name in blob_names:
     if name in labels_dict:  # Controleer of de bestandsnaam in het labels_dict zit
-        url = f"https://storage.googleapis.com/{bucket_name}/{name}"
+        url = f"https://storage.googleapis.com/{image_bucket_name}/{name}"
         # Debugging: Print de URL van het bestand dat wordt gedownload
         print(f"Downloaden van: {url}")
 
         # Download de afbeelding naar een tijdelijk bestand
         temp_file = 'temp.jpg'
-        download_blob(bucket_name, name, temp_file)
+        download_blob(image_bucket_name, name, temp_file)
 
         # Lees de afbeelding in met OpenCV
         image = cv2.imread(temp_file)
@@ -65,7 +67,7 @@ for name in blob_names:
         if image is not None:
             # Voeg je preprocessing en labeling hier toe
             images.append(image)
-            labels.append(label_map[labels_dict[name]])  # Converteer label naar numerieke waarde
+            labels.append(labels_dict[name])
         else:
             print(f"Kon de afbeelding niet laden: {temp_file}")
 
