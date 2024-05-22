@@ -15,7 +15,7 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
     print(f'Blob {source_blob_name} gedownload naar {destination_file_name}.')
 
 # Instellingen
-bucket_name = 'YOUR_BUCKET_NAME'
+bucket_name = 'datasetmeters'
 prefix = 'path/to/images/'
 storage_client = storage.Client()
 bucket = storage_client.get_bucket(bucket_name)
