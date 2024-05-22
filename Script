@@ -63,10 +63,8 @@ def update_csv_with_new_files():
             new_files.append(blob.name)
 
     # Voeg nieuwe bestanden toe aan het DataFrame
-    for new_file in new_files:
-        # Voeg hier de logica toe om het juiste label te bepalen
-        label = 0  # Voor nu wordt een standaardlabel 0 toegevoegd
-        df = df.append({'filename': new_file, 'label': label}, ignore_index=True)
+    new_rows = pd.DataFrame({'filename': new_files, 'label': [0] * len(new_files)})  # Voor nu wordt een standaardlabel 0 toegevoegd
+    df = pd.concat([df, new_rows], ignore_index=True)
 
     # Sla het bijgewerkte CSV-bestand op
     df.to_csv(csv_file_local_path, index=False)
