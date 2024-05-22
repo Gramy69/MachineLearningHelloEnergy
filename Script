@@ -7,8 +7,13 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 
-# Definieer het aantal klassen
+# Configuratie
 NUM_CLASSES = 5
+csv_bucket_name = 'csvbuckethelloenergy'
+csv_file_blob_name = 'labels.csv'
+csv_file_local_path = 'labels.csv'
+image_bucket_name = 'datasetmeters'
+prefix = ''
 
 # Verbind met de Google Cloud Storage-client
 def download_blob(bucket_name, source_blob_name, destination_file_name):
@@ -19,24 +24,63 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
     blob.download_to_filename(destination_file_name)
     print(f'Blob {source_blob_name} gedownload naar {destination_file_name}.')
 
-# Functie om labels uit het CSV-bestand te laden
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(source_file_name)
+    print(f'Bestand {source_file_name} geüpload naar {destination_blob_name}.')
+
 def load_labels(csv_file):
+    """Laad labels uit het CSV-bestand."""
     df = pd.read_csv(csv_file)
     print(df)  # Druk de inhoud van het CSV-bestand af
     return dict(zip(df.filename, df.label))
 
-# Laad labels vanuit de CSV-bucket
-csv_bucket_name = 'csvbuckethelloenergy'  # Vervang dit door de naam van je CSV-bucket
-csv_file_blob_name = 'labels.csv'  # Zorg ervoor dat dit pad correct is in de CSV-bucket
-csv_file_local_path = 'labels.csv'
-download_blob(csv_bucket_name, csv_file_blob_name, csv_file_local_path)
+def update_csv_with_new_files():
+    """Werk het CSV-bestand bij met nieuwe bestanden uit de bucket."""
+    # Download het bestaande CSV-bestand
+    download_blob(csv_bucket_name, csv_file_blob_name, csv_file_local_path)
+
+    # Laad het bestaande CSV-bestand
+    try:
+        df = pd.read_csv(csv_file_local_path)
+    except FileNotFoundError:
+        df = pd.DataFrame(columns=['filename', 'label'])
+
+    existing_files = set(df['filename'])
+
+    # Lijst van bestanden in de afbeelding-bucket
+    storage_client = storage.Client()
+    image_bucket = storage_client.get_bucket(image_bucket_name)
+    blobs = image_bucket.list_blobs(prefix=prefix)
+
+    # Zoek nieuwe bestanden die nog niet in het CSV-bestand staan
+    new_files = []
+    for blob in blobs:
+        if blob.name not in existing_files:
+            new_files.append(blob.name)
+
+    # Voeg nieuwe bestanden toe aan het DataFrame
+    for new_file in new_files:
+        # Voeg hier de logica toe om het juiste label te bepalen
+        label = 0  # Voor nu wordt een standaardlabel 0 toegevoegd
+        df = df.append({'filename': new_file, 'label': label}, ignore_index=True)
+
+    # Sla het bijgewerkte CSV-bestand op
+    df.to_csv(csv_file_local_path, index=False)
+
+    # Upload het bijgewerkte CSV-bestand terug naar de bucket
+    upload_blob(csv_bucket_name, csv_file_local_path, csv_file_blob_name)
+
+# Voer de CSV-update uit voordat je verdergaat
+update_csv_with_new_files()
 
 # Laad labels
 labels_dict = load_labels(csv_file_local_path)
 
 # Lijst van bestanden in de afbeelding-bucket
-image_bucket_name = 'datasetmeters'
-prefix = ''  # Prefix voor de bestandsnamen in de bucket is leeg omdat de afbeeldingen in de hoofdmap staan
 storage_client = storage.Client()
 image_bucket = storage_client.get_bucket(image_bucket_name)
 blobs = image_bucket.list_blobs(prefix=prefix)
