@@ -37,16 +37,24 @@ for url in image_urls:
     # Lees de afbeelding in met OpenCV
     image = cv2.imread(temp_file)
 
-    # Voeg je preprocessing en labeling hier toe
-    images.append(image)
-    labels.append(0)  # Pas dit aan naar de juiste label
+    if image is not None:
+        # Voeg je preprocessing en labeling hier toe
+        images.append(image)
+        labels.append(0)  # Pas dit aan naar de juiste label
 
     # Verwijder het tijdelijke bestand
     os.remove(temp_file)
 
+# Controleer of er afbeeldingen zijn geladen
+if len(images) == 0:
+    raise ValueError("Geen afbeeldingen geladen. Controleer of de bestandsnamen en paden correct zijn.")
+
 # Converteer lijsten naar numpy arrays
 images = np.array(images)
 labels = np.array(labels)
+
+# Controleer de vorm van de images array
+print(f"Shape van images array: {images.shape}")
 
 # Bouw het model
 model = Sequential([
